@@ -1,14 +1,9 @@
 from fastapi import FastAPI
-import datetime
+from datetime import datetime
 
 app = FastAPI()
 
-@app.get("/")
-def hello_world():
-    return "Hello world!"
-
-
 @app.get("/api/time")
-def get_time():
-    current_time = datetime.datetime.now()
-    return { "time": current_time }
+def get_time(name: str = ''):
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return { "message": f"Hi {name}! It's {current_time}" }
