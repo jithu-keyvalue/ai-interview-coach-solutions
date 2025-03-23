@@ -1,28 +1,21 @@
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+from typing import Literal
 
 app = FastAPI()
-
 users = {}
-ALLOWED_ROLES = {"developer", "designer", "product-manager"}
 
-@app.post("/api/users")
-def create_user(data: dict):
-    if "name" not in data or not isinstance(data["name"], str):
-        return JSONResponse(status_code=400, content={"error": "Name is required and must be a string"})
+class User(BaseModel):
+    name: str = Field(..., min_length=2, max_length=10)
+    role: Literal["developer", "designer", "product-manager", "tester"]
+    place: str = Field(..., min_length=2)
 
-    if "role" not in data or data["role"] not in ALLOWED_ROLES:
-        return JSONResponse(status_code=400, content={"error": "Unsupported role"})
-
-    if "place" not in data or not isinstance(data["place"], str):
-        return JSONResponse(status_code=400, content={"error": "Place is required and must be a string"})
-
+@app.post("/api/users", status_code=201)
+def create_user(user: User):
     user_id = len(users) + 1
-    users[user_id] = data
-    return JSONResponse(status_code=201, content={"id": user_id, "message": "User profile saved!"})
+    users[user_id] = user.model_dump()
+    return {"id": user_id, "message": "User profile saved!"}
 
 @app.get("/api/users/{user_id}")
 def get_user(user_id: int):
-    if user_id not in users:
-        return JSONResponse(status_code=404, content={"error": "User not found"})
-    return users[user_id]
+    return users.get(user_id, {"error": "User not found"})
