@@ -1,21 +1,26 @@
 from fastapi import FastAPI
-from pydantic import BaseModel, Field
-from typing import Literal
+from dotenv import load_dotenv
+import psycopg2
+import os
+
+load_dotenv()
 
 app = FastAPI()
-users = {}
 
-class User(BaseModel):
-    name: str = Field(..., min_length=2, max_length=10)
-    role: Literal["developer", "designer", "product-manager", "tester"]
-    place: str = Field(..., min_length=2)
+@app.get("/api/test-db")
+def test_db():
+    conn = psycopg2.connect(
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT")
+    )
 
-@app.post("/api/users", status_code=201)
-def create_user(user: User):
-    user_id = len(users) + 1
-    users[user_id] = user.model_dump()
-    return {"id": user_id, "message": "User profile saved!"}
+    cur = conn.cursor()
+    cur.execute("SELECT NOW()")
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
 
-@app.get("/api/users/{user_id}")
-def get_user(user_id: int):
-    return users.get(user_id, {"error": "User not found"})
+    return {"time": row[0]}
