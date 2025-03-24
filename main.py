@@ -36,8 +36,8 @@ def create_user(data: dict):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
-        "INSERT INTO users (name, role, place) VALUES (%s, %s, %s) RETURNING id",
-        (data["name"], data["role"], data["place"])
+        "INSERT INTO users (name, role, place, password) VALUES (%s, %s, %s, %s) RETURNING id", 
+        (data["name"], data["role"], data["place"], data["password"]) 
     )
     user_id = cur.fetchone()[0]
     conn.commit()
