@@ -4,6 +4,3 @@
 # Bytecode
 __pycache__/
 *.pyc
-
-# Env files
-.env
