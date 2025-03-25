@@ -12,4 +12,4 @@ def create_user(data: dict):
 
 @app.get("/api/users/{id}")
 def get_user(id: int):
-    return users.get(id, {"error": "User not found"})
+    return users[id]
