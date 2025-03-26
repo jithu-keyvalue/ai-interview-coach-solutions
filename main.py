@@ -2,11 +2,20 @@ from fastapi import FastAPI, HTTPException
 from models import Base, User, UserCreate, UserOut
 from database import engine, SessionLocal
 from passlib.context import CryptContext
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 Base.metadata.create_all(bind=engine)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow origin for backend server
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/api/users", response_model=UserOut, status_code=201)
 def create_user(user: UserCreate):

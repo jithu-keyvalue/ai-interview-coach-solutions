@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Signup - AI Coach</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 400px;
+      margin: 50px auto;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      font-size: 16px;
+    }
+    button {
+      background: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #msg {
+      margin-top: 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h2>Signup</h2>
+  <form id="signup-form">
+    <input type="text" id="name" placeholder="Name" required />
+    <input type="text" id="role" placeholder="Role" required />
+    <input type="text" id="place" placeholder="Place" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button type="submit">Sign Up</button>
+  </form>
+
+  <p id="msg"></p>
+
+  <script>
+    const form = document.getElementById("signup-form");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {
+        name: document.getElementById("name").value,
+        role: document.getElementById("role").value,
+        place: document.getElementById("place").value,
+        password: document.getElementById("password").value,
+      };
+
+      <!--Todo: Fix the API URL & Method-->
+      const res = await fetch("http://localhost:8000/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const msg = document.getElementById("msg");
+      if (res.ok) {
+        msg.textContent = "Signup successful!";
+        msg.style.color = "green";
+      } else {
+        const err = await res.json();
+        msg.textContent = `❌ ${err.detail}`;
+        msg.style.color = "red";
+      }
+    });
+  </script>
+</body>
+</html>
