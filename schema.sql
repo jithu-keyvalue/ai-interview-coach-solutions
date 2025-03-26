@@ -1,6 +1,3 @@
--- 📝 TODO: For existing DBs, run this once manually and then comment it
--- ALTER TABLE users RENAME COLUMN password TO password_hash;
-
 -- Create table to store user info
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -10,3 +7,5 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL  -- 📝 TODO: Rename this to password_hash
 );
 
+-- 📝 TODO: For existing DBs, run this once manually and then comment it
+-- ALTER TABLE users RENAME COLUMN password TO password_hash;
