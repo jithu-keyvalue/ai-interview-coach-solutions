@@ -37,7 +37,7 @@ def create_user(data: dict):
     cur = conn.cursor()
     cur.execute(
         "INSERT INTO users (name, role, place, password) VALUES (%s, %s, %s, %s) RETURNING id", 
-        (data["name"], data["role"], data["place"], data["password"]) 
+        (data["name"], data["role"], data["place"], data["password"])
     )
     user_id = cur.fetchone()[0]
     conn.commit()
@@ -51,12 +51,15 @@ def get_user(user_id: int):
     cur = conn.cursor()
     cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
     row = cur.fetchone()
+
     user = {
         "id": row[0],
         "name": row[1],
         "role": row[2],
         "place": row[3],
+        "password": row[4],
     }
+
     cur.close()
     conn.close()
     if user:
