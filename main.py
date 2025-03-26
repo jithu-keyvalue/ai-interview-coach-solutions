@@ -56,8 +56,7 @@ def update_user(user_id: int, data: UserCreate):
     db.refresh(user)
     return user
 
-# 📝 TODO: Fix method name for delete operation
-@app.get("/api/users/{user_id}", status_code=204)
+@app.delete("/api/users/{user_id}", status_code=204)
 def delete_user(user_id: int):
     db = SessionLocal()
     user = db.query(User).filter(User.id == user_id).first()
@@ -69,8 +68,7 @@ def delete_user(user_id: int):
     db.commit()
     return
 
-# 📝 TODO: Does the response structure look right?
-@app.get("/api/users", response_model=list[UserCreate])
+@app.get("/api/users", response_model=list[UserOut])
 def list_users():
     db = SessionLocal()
     return db.query(User).all()
