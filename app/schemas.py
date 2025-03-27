@@ -9,3 +9,7 @@ class UserOut(BaseModel):
     id: int
     name: str
     email: str
+
+class LoginInput(BaseModel):
+    email: str
+    password: str

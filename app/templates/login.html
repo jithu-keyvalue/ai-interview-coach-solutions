@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login - AI Interview Coach</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 80px; }
+    form { display: flex; flex-direction: column; width: 250px; gap: 10px; }
+    input, button { padding: 10px; font-size: 1rem; }
+    button { background-color: black; color: white; border: none; cursor: pointer; }
+    p { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div style="position: absolute; top: 20px; left: 30px; font-size: 1.2rem; font-weight: bold;">
+    AI Interview Coach
+  </div>
+  <h2>Login</h2>
+  <form id="loginForm">
+    <input type="email" placeholder="Email" name="email" required />
+    <input type="password" placeholder="Password" name="password" required />
+    <button type="submit">Login</button>
+  </form>
+  <p>Don't have an account? <a href="signup.html">Sign up</a></p>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = { email: form.email.value, password: form.password.value };
+      const res = await fetch('http://localhost:8000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+      if (res.ok && result.token) {
+        localStorage.setItem('token', result.token);
+        window.location.href = 'home.html';
+      } else {
+        alert('Login failed');
+      }
+    });
+  </script>
+</body>
+</html>

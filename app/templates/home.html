@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Home - AI Interview Coach</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+    h1 { font-size: 2.5rem; margin-bottom: 20px; }
+    button { padding: 10px 20px; font-size: 1rem; background-color: black; color: white; border: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div style="position: absolute; top: 20px; left: 30px; font-size: 1.2rem; font-weight: bold;">
+    AI Interview Coach
+  </div>
+  <h1 id="greeting">Loading...</h1>
+  <button id="logoutBtn">Logout</button>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = 'login.html';
+    }
+
+    fetch('http://localhost:8000/api/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.name) {
+        document.getElementById('greeting').innerText = `Hello, ${data}!`;
+      } else {
+        window.location.href = 'login.html';
+      }
+    });
+
+    document.getElementById('logoutBtn').onclick = () => {
+      localStorage.removeItem('token');
+      window.location.href = 'login.html';
+    };
+  </script>
+</body>
+</html>
