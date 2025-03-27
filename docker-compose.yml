@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres
-    container_name: interview-db
+    container_name: aic-db-container
     ports:
       - "5434:5432"
     env_file:
