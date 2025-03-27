@@ -59,7 +59,6 @@
         password: document.getElementById("password").value,
       };
 
-      <!--Todo: Fix the API URL & Method-->
       const res = await fetch("http://localhost:8000/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,7 +71,7 @@
         msg.style.color = "green";
       } else {
         const err = await res.json();
-        msg.textContent = `❌ ${err.detail}`;
+        msg.textContent = `${err.detail}`;
         msg.style.color = "red";
       }
     });
