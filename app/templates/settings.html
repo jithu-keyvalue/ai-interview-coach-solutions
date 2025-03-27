@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Settings - AI Coach</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .title { font-weight: bold; font-size: 1.2rem; }
+    .actions button {
+      margin-left: 10px;
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      background: black;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    form {
+      max-width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 40px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 1rem;
+    }
+    .delete-btn {
+      background: red;
+      color: white;
+    }
+    .nav { margin-top: 50px; }
+    .nav a {
+      text-decoration: none;
+      font-size: 0.95rem;
+      color: blue;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">AI Interview Coach</div>
+    <div class="actions">
+      <button id="logoutBtn">Logout</button>
+    </div>
+  </div>
+
+  <h2>Update Your Info</h2>
+  <form id="updateForm">
+    <input type="text" name="name" placeholder="New name (optional)" />
+    <input type="email" name="email" placeholder="New email (optional)" />
+    <input type="password" name="password" placeholder="New password (optional)" />
+    <button type="submit">Update</button>
+  </form>
+
+  <h3>Danger Zone</h3>
+  <button class="delete-btn" id="deleteBtn">Delete My Account</button>
+
+  <div class="nav">
+    <a href="home.html">← Back to Home</a>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    document.getElementById('logoutBtn').onclick = () => {
+      localStorage.removeItem('token');
+      window.location.href = 'login.html';
+    };
+
+    document.getElementById('updateForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {};
+      if (form.name.value) data.name = form.name.value;
+      if (form.email.value) data.email = form.email.value;
+      if (form.password.value) data.password = form.password.value;
+
+      const res = await fetch('http://localhost:8000/api/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) alert('Updated successfully!');
+      else alert('Update failed');
+    };
+
+    document.getElementById('deleteBtn').onclick = async () => {
+      if (!confirm('Are you sure you want to delete your account?')) return;
+
+      const res = await fetch('http://localhost:8000/api/me', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        localStorage.removeItem('token');
+        window.location.href = 'signup.html';
+      } else {
+        alert('Failed to delete account');
+      }
+    };
+  </script>
+</body>
+</html>

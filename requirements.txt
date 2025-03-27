@@ -6,3 +6,4 @@ passlib[bcrypt]
 sqlalchemy
 alembic
 python-jose
+pydantic[email]

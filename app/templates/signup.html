@@ -2,24 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Signup - AI Interview Coach</title>
+  <title>Signup - AI Coach</title>
   <style>
     body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 80px; }
     form { display: flex; flex-direction: column; width: 250px; gap: 10px; }
     input, button { padding: 10px; font-size: 1rem; }
     button { background-color: black; color: white; border: none; cursor: pointer; }
     p { margin-top: 20px; }
+    .title { position: absolute; top: 20px; left: 30px; font-size: 1.2rem; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div style="position: absolute; top: 20px; left: 30px; font-size: 1.2rem; font-weight: bold;">
-    AI Interview Coach
-  </div>
+  <div class="title">AI Interview Coach</div>
   <h2>Sign Up</h2>
   <form id="signupForm">
-    <input type="text" placeholder="Name" name="name" required />
-    <input type="email" placeholder="Email" name="email" required />
-    <input type="password" placeholder="Password" name="password" required />
+    <input type="text" name="name" placeholder="Name" required />
+    <input type="email" name="email" placeholder="Email" required />
+    <input type="password" name="password" placeholder="Password" required />
     <button type="submit">Sign Up</button>
   </form>
   <p>Already have an account? <a href="login.html">Login</a></p>

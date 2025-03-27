@@ -2,37 +2,56 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Home - AI Interview Coach</title>
+  <title>Home - AI Coach</title>
   <style>
-    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-    h1 { font-size: 2.5rem; margin-bottom: 20px; }
-    button { padding: 10px 20px; font-size: 1rem; background-color: black; color: white; border: none; cursor: pointer; }
+    body { font-family: sans-serif; padding: 40px; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .title { font-weight: bold; font-size: 1.2rem; }
+    .actions a, .actions button {
+      margin-left: 10px;
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      text-decoration: none;
+      background: black;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .center { text-align: center; margin-top: 100px; font-size: 2rem; }
   </style>
 </head>
 <body>
-  <div style="position: absolute; top: 20px; left: 30px; font-size: 1.2rem; font-weight: bold;">
-    AI Interview Coach
+  <div class="header">
+    <div class="title">AI Interview Coach</div>
+    <div class="actions">
+      <a href="settings.html">Settings</a>
+      <button id="logoutBtn">Logout</button>
+    </div>
   </div>
-  <h1 id="greeting">Loading...</h1>
-  <button id="logoutBtn">Logout</button>
+
+  <div class="center">
+    Welcome, <span id="username">...</span>
+  </div>
 
   <script>
     const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = 'login.html';
-    }
+    if (!token) window.location.href = 'login.html';
 
     fetch('http://localhost:8000/api/me', {
       headers: { Authorization: `Bearer ${token}` }
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.name) {
-        document.getElementById('greeting').innerText = `Hello, ${data}!`;
-      } else {
-        window.location.href = 'login.html';
-      }
-    });
+      .then(res => res.json())
+      .then(data => {
+        if (data.name) {
+          document.getElementById('username').innerText = data.name;
+        } else {
+          window.location.href = 'login.html';
+        }
+      });
 
     document.getElementById('logoutBtn').onclick = () => {
       localStorage.removeItem('token');
