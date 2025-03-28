@@ -1,5 +1,7 @@
+import os
+import openai
 import logging
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.models import User
@@ -17,6 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -74,3 +77,20 @@ def delete_user(
     db.delete(current_user)
     db.commit()
     return
+
+
+@app.post("/api/chat")
+def chat(request: Request, payload: dict):
+    message = payload.get("message")
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is required")
+
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{ "role": "user", "content": message }]
+        )
+        reply = response.choices[0].message.content
+        return { "reply": reply }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

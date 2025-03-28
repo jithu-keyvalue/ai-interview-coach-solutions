@@ -4,37 +4,61 @@
   <meta charset="UTF-8" />
   <title>Home - AI Coach</title>
   <style>
-    body { font-family: sans-serif; padding: 40px; }
-    .header {
+    body {
+      font-family: sans-serif;
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: center;
+      padding-top: 60px;
     }
-    .title { font-weight: bold; font-size: 1.2rem; }
-    .actions a, .actions button {
-      margin-left: 10px;
-      padding: 6px 12px;
-      font-size: 0.9rem;
-      text-decoration: none;
+    #logoutBtn {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+    }
+    #settingsBtn {
+      position: absolute;
+      top: 20px;
+      right: 120px;
+    }
+    #chat {
+      margin-top: 50px;
+      width: 400px;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 10px 15px;
       background: black;
       color: white;
       border: none;
+      margin-top: 10px;
       cursor: pointer;
     }
-    .center { text-align: center; margin-top: 100px; font-size: 2rem; }
+    #chatReply {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      background: #f1f1f1;
+      padding: 10px;
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="title">AI Interview Coach</div>
-    <div class="actions">
-      <a href="settings.html">Settings</a>
-      <button id="logoutBtn">Logout</button>
-    </div>
+  <div style="position: absolute; top: 20px; left: 30px; font-size: 1.2rem; font-weight: bold;">
+    AI Interview Coach
   </div>
+  <button id="settingsBtn" onclick="window.location.href='settings.html'">Settings</button>
+  <button id="logoutBtn">Logout</button>
 
-  <div class="center">
-    Welcome, <span id="username">...</span>
+  <h1 id="welcomeText">Welcome, <span id="username">Loading...</span></h1>
+
+  <div id="chat">
+    <textarea id="chatInput" rows="4" placeholder="Ask the coach something..."></textarea>
+    <button onclick="sendChat()">Ask</button>
+    <div id="chatReply"></div>
   </div>
 
   <script>
@@ -44,19 +68,33 @@
     fetch('http://localhost:8000/api/me', {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => res.json())
-      .then(data => {
-        if (data.name) {
-          document.getElementById('username').innerText = data.name;
-        } else {
-          window.location.href = 'login.html';
-        }
-      });
+    .then(res => res.json())
+    .then(data => {
+      if (data.name) document.getElementById('username').innerText = data.name;
+      else window.location.href = 'login.html';
+    });
 
     document.getElementById('logoutBtn').onclick = () => {
       localStorage.removeItem('token');
       window.location.href = 'login.html';
     };
+
+    async function sendChat() {
+      const msg = document.getElementById('chatInput').value;
+      if (!msg.trim()) return;
+
+      const res = await fetch("http://localhost:8000/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token
+        },
+        body: JSON.stringify({ message: msg })
+      });
+
+      const data = await res.json();
+      document.getElementById("chatReply").innerText = data.reply || "No reply.";
+    }
   </script>
 </body>
 </html>

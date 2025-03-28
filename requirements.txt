@@ -7,3 +7,4 @@ sqlalchemy
 alembic
 python-jose
 pydantic[email]
+openai
