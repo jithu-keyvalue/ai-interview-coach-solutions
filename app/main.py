@@ -1,13 +1,13 @@
 import os
-import openai
 import logging
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from app.models import User
+from app.models import User, Message
 from app.database import get_db
-from app.schemas import UserCreate, UserOut, LoginInput, UpdateUser
+from app.schemas import UserCreate, UserOut, LoginInput, UpdateUser, ChatInput
 from app.auth import hash_password, verify_password, create_token, get_current_user
+from openai import OpenAI
 
 app = FastAPI()
 
@@ -19,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -80,17 +80,48 @@ def delete_user(
 
 
 @app.post("/api/chat")
-def chat(request: Request, payload: dict):
-    message = payload.get("message")
-    if not message:
-        raise HTTPException(status_code=400, detail="Message is required")
+def chat(
+    data: ChatInput,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    # Get last 20 messages for this user
+    past_messages = db.query(Message).filter(Message.user_id == user.id).order_by(Message.id.desc()).limit(20).all()
+    history = [
+        {"role": m.role, "content": m.content}
+        for m in reversed(past_messages)
+    ]
 
+    # Add current question
+    history.append({"role": "user", "content": data.message})
+    
     try:
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[{ "role": "user", "content": message }]
+            messages=history
         )
-        reply = response.choices[0].message.content
-        return { "reply": reply }
+        answer = response.choices[0].message.content
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print("OpenAI error:", e)
+        raise HTTPException(status_code=500, detail="AI call failed")
+
+  
+    answer = response.choices[0].message.content
+
+    # Save both user question and assistant reply
+    db.add(Message(user_id=user.id, role="user", content=data.message))
+    db.add(Message(user_id=user.id, role="assistant", content=answer))
+    db.commit()
+
+    return { "reply": answer }
+
+@app.get("/api/chat/history")
+def get_chat_history(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    messages = db.query(Message).filter(Message.user_id == user.id).order_by(Message.id).all()
+    return [
+        {"role": m.role, "content": m.content}
+        for m in messages
+    ]
