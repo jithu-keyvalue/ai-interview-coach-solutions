@@ -86,10 +86,10 @@ def chat(
     user: User = Depends(get_current_user)
 ):
     # Get last 20 messages for this user
-    past_messages = db.query(Message).filter(Message.user_id == user.id).order_by(Message.id.desc()).limit(20).all()
+    past_messages = db.query(Message).filter(Message.user_id == user.id).order_by(Message.id.asc()).limit(20).all()
     history = [
         {"role": m.role, "content": m.content}
-        for m in reversed(past_messages)
+        for m in past_messages
     ]
 
     # Add current question
