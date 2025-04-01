@@ -1,6 +1,8 @@
 import os
+import time
 import logging
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.models import User, Message
@@ -79,41 +81,50 @@ def delete_user(
     return
 
 
-@app.post("/api/chat")
-def chat(
+@app.post("/api/chat/stream")
+def chat_stream(
     data: ChatInput,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    # Get last 20 messages for this user
-    past_messages = db.query(Message).filter(Message.user_id == user.id).order_by(Message.id.asc()).limit(20).all()
-    history = [
-        {"role": m.role, "content": m.content}
-        for m in past_messages
-    ]
-
-    # Add current question
+    past_messages = (
+        db.query(Message)
+        .filter(Message.user_id == user.id)
+        .order_by(Message.id.asc())
+        .limit(20)
+        .all()
+    )
+    history = [{"role": m.role, "content": m.content} for m in past_messages]
     history.append({"role": "user", "content": data.message})
-    
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=history
-        )
-        answer = response.choices[0].message.content
-    except Exception as e:
-        print("OpenAI error:", e)
-        raise HTTPException(status_code=500, detail="AI call failed")
 
-  
-    answer = response.choices[0].message.content
+    def event_generator():
+        full_reply = ""
+        try:
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=history,
+                stream=True
+            )
 
-    # Save both user question and assistant reply
-    db.add(Message(user_id=user.id, role="user", content=data.message))
-    db.add(Message(user_id=user.id, role="assistant", content=answer))
-    db.commit()
+            for chunk in response:
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    token = delta.content
+                    full_reply += token
+                    yield f"data: {token}\n\n"
+                    time.sleep(0.01)  # smoother delivery for UI
 
-    return { "reply": answer }
+            # Save conversation
+            db.add(Message(user_id=user.id, role="user", content=data.message))
+            db.add(Message(user_id=user.id, role="assistant", content=full_reply))
+            db.commit()
+
+        except Exception as e:
+            logger.error(f"SSE Error: {e}")
+            yield f"event: error\ndata: Chat failed\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
 
 @app.get("/api/chat/history")
 def get_chat_history(

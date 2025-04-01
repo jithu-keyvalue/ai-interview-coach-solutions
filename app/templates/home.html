@@ -53,7 +53,7 @@
       margin: 12px 0;
     }
 
-    .message div span.label {
+    .message .label {
       font-weight: bold;
       margin-right: 5px;
     }
@@ -112,9 +112,7 @@
 
   <script>
     const token = localStorage.getItem("token");
-    if (!token) {
-      window.location.href = "login.html";
-    }
+    if (!token) window.location.href = "login.html";
 
     function logout() {
       localStorage.removeItem("token");
@@ -149,7 +147,6 @@
         chatBox.appendChild(div);
       });
 
-      // Scroll to last message
       chatBox.lastElementChild?.scrollIntoView({ behavior: "smooth" });
     }
 
@@ -159,7 +156,23 @@
       const message = input.value;
       input.value = "";
 
-      const res = await fetch("http://localhost:8000/api/chat", {
+      const chatBox = document.getElementById("chatBox");
+
+      // Show user message
+      const userDiv = document.createElement("div");
+      userDiv.className = "message user";
+      userDiv.innerHTML = `<div><span class="label">You:</span> <span class="text">${message}</span></div>`;
+      chatBox.appendChild(userDiv);
+
+      // Create a new coach reply placeholder
+      const coachDiv = document.createElement("div");
+      coachDiv.className = "message assistant";
+      coachDiv.innerHTML = `<div><span class="label">Coach:</span> <span class="text"></span></div>`;
+      const coachTextSpan = coachDiv.querySelector(".text");
+      chatBox.appendChild(coachDiv);
+      chatBox.lastElementChild?.scrollIntoView({ behavior: "smooth" });
+
+      const res = await fetch("http://localhost:8000/api/chat/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -168,12 +181,21 @@
         body: JSON.stringify({ message })
       });
 
-      const reply = await res.json();
-      const newMessages = [
-        { role: "user", content: message },
-        { role: "assistant", content: reply.reply }
-      ];
-      renderChat(newMessages, true);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n").filter(line => line.startsWith("data:"));
+        for (const line of lines) {
+          const token = line.replace("data: ", "");
+          coachTextSpan.textContent += token;
+          chatBox.lastElementChild?.scrollIntoView({ behavior: "smooth" });
+        }
+      }
     });
 
     fetchChatHistory();
