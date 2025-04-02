@@ -113,16 +113,16 @@
   <script>
     const token = localStorage.getItem("token");
     if (!token) window.location.href = "login.html";
-
+  
     function logout() {
       localStorage.removeItem("token");
       window.location.href = "login.html";
     }
-
+  
     function goToSettings() {
       window.location.href = "settings.html";
     }
-
+  
     async function fetchChatHistory() {
       const res = await fetch("http://localhost:8000/api/chat/history", {
         headers: { Authorization: `Bearer ${token}` }
@@ -130,11 +130,11 @@
       const messages = await res.json();
       renderChat(messages);
     }
-
+  
     function renderChat(messages, append = false) {
       const chatBox = document.getElementById("chatBox");
       if (!append) chatBox.innerHTML = "";
-
+  
       messages.forEach(msg => {
         const div = document.createElement("div");
         div.className = `message ${msg.role}`;
@@ -146,59 +146,54 @@
         `;
         chatBox.appendChild(div);
       });
-
+  
       chatBox.lastElementChild?.scrollIntoView({ behavior: "smooth" });
     }
-
+  
     document.getElementById("chatForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const input = document.getElementById("messageInput");
       const message = input.value;
       input.value = "";
 
+      // Add user's message to chat
+      renderChat([{ role: "user", content: message }], true);
+
       const chatBox = document.getElementById("chatBox");
 
-      // Show user message
-      const userDiv = document.createElement("div");
-      userDiv.className = "message user";
-      userDiv.innerHTML = `<div><span class="label">You:</span> <span class="text">${message}</span></div>`;
-      chatBox.appendChild(userDiv);
-
-      // Create a new coach reply placeholder
-      const coachDiv = document.createElement("div");
-      coachDiv.className = "message assistant";
-      coachDiv.innerHTML = `<div><span class="label">Coach:</span> <span class="text"></span></div>`;
-      const coachTextSpan = coachDiv.querySelector(".text");
-      chatBox.appendChild(coachDiv);
+      // Create assistant message placeholder
+      const replyDiv = document.createElement("div");
+      replyDiv.className = "message assistant";
+      replyDiv.innerHTML = `
+        <div>
+          <span class="label">Coach:</span>
+          <span class="text"></span>
+        </div>
+      `;
+      chatBox.appendChild(replyDiv);
+      const text = replyDiv.querySelector(".text");
       chatBox.lastElementChild?.scrollIntoView({ behavior: "smooth" });
 
-      const res = await fetch("http://localhost:8000/api/chat/stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ message })
-      });
+      // Setup WebSocket
+      const socket = new WebSocket("ws://localhost:8000/ws/chat");
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder("utf-8");
+      socket.onopen = () => {
+        const token = localStorage.getItem("token");
+        socket.send(JSON.stringify({ message, token }));
+      };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      socket.onmessage = (event) => {
+        text.textContent += event.data;
+        chatBox.lastElementChild?.scrollIntoView({ behavior: "smooth" });
+      };
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n").filter(line => line.startsWith("data:"));
-        for (const line of lines) {
-          const token = line.replace("data: ", "");
-          coachTextSpan.textContent += token;
-          chatBox.lastElementChild?.scrollIntoView({ behavior: "smooth" });
-        }
-      }
+      socket.onerror = () => {
+        alert("WebSocket error");
+      };
     });
-
+  
     fetchChatHistory();
   </script>
+  
 </body>
 </html>

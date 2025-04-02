@@ -19,6 +19,3 @@ class UserOut(BaseModel):
     id: int
     name: str
     email: EmailStr
-
-class ChatInput(BaseModel):
-    message: str

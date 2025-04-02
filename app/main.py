@@ -1,14 +1,14 @@
 import os
-import time
+import asyncio
 import logging
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.websockets import WebSocketState
 from sqlalchemy.orm import Session
 from app.models import User, Message
 from app.database import get_db
-from app.schemas import UserCreate, UserOut, LoginInput, UpdateUser, ChatInput
-from app.auth import hash_password, verify_password, create_token, get_current_user
+from app.schemas import UserCreate, UserOut, LoginInput, UpdateUser
+from app.auth import hash_password, verify_password, create_token, get_current_user, decode_token
 from openai import OpenAI
 
 app = FastAPI()
@@ -81,51 +81,6 @@ def delete_user(
     return
 
 
-@app.post("/api/chat/stream")
-def chat_stream(
-    data: ChatInput,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
-):
-    past_messages = (
-        db.query(Message)
-        .filter(Message.user_id == user.id)
-        .order_by(Message.id.asc())
-        .limit(20)
-        .all()
-    )
-    history = [{"role": m.role, "content": m.content} for m in past_messages]
-    history.append({"role": "user", "content": data.message})
-
-    def event_generator():
-        full_reply = ""
-        try:
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=history,
-                stream=True
-            )
-
-            for chunk in response:
-                delta = chunk.choices[0].delta
-                if delta.content:
-                    token = delta.content
-                    full_reply += token
-                    yield f"data: {token}\n\n"
-                    time.sleep(0.01)  # smoother delivery for UI
-
-            # Save conversation
-            db.add(Message(user_id=user.id, role="user", content=data.message))
-            db.add(Message(user_id=user.id, role="assistant", content=full_reply))
-            db.commit()
-
-        except Exception as e:
-            logger.error(f"SSE Error: {e}")
-            yield f"event: error\ndata: Chat failed\n\n"
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
-
-
 @app.get("/api/chat/history")
 def get_chat_history(
     db: Session = Depends(get_db),
@@ -136,3 +91,69 @@ def get_chat_history(
         {"role": m.role, "content": m.content}
         for m in messages
     ]
+
+@app.websocket("/ws/chat")
+async def websocket_chat(websocket: WebSocket, 
+    db: Session = Depends(get_db),
+):
+    await websocket.accept()
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            message = data.get("message")
+            token = data.get("token")
+
+            if not token:
+                await websocket.send_text("Missing token.")
+                await websocket.close()
+                return
+
+            # Decode token and fetch user manually
+            try:
+                payload = decode_token(token)
+                user_id = payload.get("user_id")
+                user = db.query(User).filter(User.id == user_id).first()
+                if not user:
+                    await websocket.send_text("Invalid user.")
+                    await websocket.close()
+                    return
+            except Exception:
+                await websocket.send_text("Invalid token.")
+                await websocket.close()
+                return
+
+            # Fetch last 20 messages
+            past_messages = db.query(Message).filter(Message.user_id == user.id).order_by(Message.id.asc()).limit(20).all()
+            history = [
+                {"role": m.role, "content": m.content}
+                for m in past_messages
+            ]
+            history.append({"role": "user", "content": message})
+
+            # Save user's message
+            db.add(Message(user_id=user.id, role="user", content=message))
+            db.commit()
+
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=history,
+                stream=True
+            )
+
+            full_reply = ""
+            for chunk in response:
+                delta = chunk.choices[0].delta
+                content = delta.content or ""
+                full_reply += content
+                if websocket.application_state == WebSocketState.DISCONNECTED:
+                    break
+                await websocket.send_text(content)
+                await asyncio.sleep(0.01)
+
+            # Save reply
+            db.add(Message(user_id=user.id, role="assistant", content=full_reply))
+            db.commit()
+
+    except WebSocketDisconnect:
+        print("WebSocket disconnected")
