@@ -113,16 +113,40 @@
   <script>
     const token = localStorage.getItem("token");
     if (!token) window.location.href = "login.html";
-  
+
+    const chatBox = document.getElementById("chatBox");
+    let text = null;
+    let socket;
+
+    function initWebSocket() {
+      socket = new WebSocket("ws://localhost:8000/ws/chat");
+
+      socket.onopen = () => {
+        console.log("WebSocket connected");
+      };
+
+      socket.onmessage = (event) => {
+        if (text) {
+          text.textContent += event.data;
+          chatBox.lastElementChild?.scrollIntoView({ behavior: "smooth" });
+        }
+      };
+
+      socket.onerror = () => alert("WebSocket error");
+      socket.onclose = () => console.log("WebSocket closed");
+    }
+
+    initWebSocket();
+
     function logout() {
       localStorage.removeItem("token");
       window.location.href = "login.html";
     }
-  
+
     function goToSettings() {
       window.location.href = "settings.html";
     }
-  
+
     async function fetchChatHistory() {
       const res = await fetch("http://localhost:8000/api/chat/history", {
         headers: { Authorization: `Bearer ${token}` }
@@ -130,11 +154,10 @@
       const messages = await res.json();
       renderChat(messages);
     }
-  
+
     function renderChat(messages, append = false) {
-      const chatBox = document.getElementById("chatBox");
       if (!append) chatBox.innerHTML = "";
-  
+
       messages.forEach(msg => {
         const div = document.createElement("div");
         div.className = `message ${msg.role}`;
@@ -146,20 +169,18 @@
         `;
         chatBox.appendChild(div);
       });
-  
+
       chatBox.lastElementChild?.scrollIntoView({ behavior: "smooth" });
     }
-  
+
     document.getElementById("chatForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const input = document.getElementById("messageInput");
       const message = input.value;
       input.value = "";
 
-      // Add user's message to chat
+      // Show user's message
       renderChat([{ role: "user", content: message }], true);
-
-      const chatBox = document.getElementById("chatBox");
 
       // Create assistant message placeholder
       const replyDiv = document.createElement("div");
@@ -171,29 +192,14 @@
         </div>
       `;
       chatBox.appendChild(replyDiv);
-      const text = replyDiv.querySelector(".text");
+      text = replyDiv.querySelector(".text");
+
       chatBox.lastElementChild?.scrollIntoView({ behavior: "smooth" });
 
-      // Setup WebSocket
-      const socket = new WebSocket("ws://localhost:8000/ws/chat");
-
-      socket.onopen = () => {
-        const token = localStorage.getItem("token");
-        socket.send(JSON.stringify({ message, token }));
-      };
-
-      socket.onmessage = (event) => {
-        text.textContent += event.data;
-        chatBox.lastElementChild?.scrollIntoView({ behavior: "smooth" });
-      };
-
-      socket.onerror = () => {
-        alert("WebSocket error");
-      };
+      socket.send(JSON.stringify({ message, token }));
     });
-  
+
     fetchChatHistory();
   </script>
-  
 </body>
 </html>
